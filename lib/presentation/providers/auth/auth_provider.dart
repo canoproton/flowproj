@@ -32,6 +32,7 @@ class AuthProvider extends ChangeNotifier {
     required String password,
     String? ipAddress,
   }) async {
+    print('🔍 [PROVIDER] Login iniciado para: $email');
     _isLoading = true;
     _error = null;
     _isBlocked = false;
@@ -39,11 +40,13 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
+      print('🔍 [PROVIDER] Chamando repository.login...');
       _currentUser = await _repository.login(
         email: email,
         password: password,
         ipAddress: ipAddress,
       );
+      print('✅ [PROVIDER] Login bem-sucedido! User: ${_currentUser?.email}');
       _isLoading = false;
       notifyListeners();
       return true;
