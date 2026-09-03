@@ -53,3 +53,7 @@ supabase/.env
 supabase/.env
 *.env
 .env*
+supabase/.temp/
+supabase/.env
+*.env
+.env*
