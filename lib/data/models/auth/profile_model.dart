@@ -39,7 +39,6 @@ enum NivelAcesso {
     return prioridade >= nivelMinimo.prioridade;
   }
 
-  /// Níveis que este nível pode gerenciar
   List<NivelAcesso> get podeGerenciar {
     switch (this) {
       case NivelAcesso.hyper:
@@ -63,8 +62,8 @@ enum NivelAcesso {
 class ProfileModel extends Equatable {
   final String id;
   final String userId;
-  final String email;
   final String nome;
+  final String? email;        // ✅ CAMPO ADICIONADO
   final String? cargo;
   final String? departamento;
   final String? telefone;
@@ -72,11 +71,11 @@ class ProfileModel extends Equatable {
   final bool isActive;
   final DateTime? lastLogin;
 
-  // ⭐ NÍVEL DE ACESSO
+  // Nível de Acesso
   final NivelAcesso nivelAcesso;
   final Map<String, dynamic>? permissoesCustomizadas;
 
-  // ⭐ Integração com Contato
+  // Integração com Contato
   final String? contatoId;
   final bool isContato;
 
@@ -90,6 +89,7 @@ class ProfileModel extends Equatable {
     required this.id,
     required this.userId,
     required this.nome,
+    this.email,                // ✅ ADICIONADO NO CONSTRUTOR
     this.cargo,
     this.departamento,
     this.telefone,
@@ -110,8 +110,8 @@ class ProfileModel extends Equatable {
     return ProfileModel(
       id: json['id']?.toString() ?? '',
       userId: json['user_id']?.toString() ?? '',
-      email: json['email']?.toString() ?? '',
       nome: json['nome']?.toString() ?? '',
+      email: json['email']?.toString(),      // ✅ ADICIONADO NO fromJson
       cargo: json['cargo']?.toString(),
       departamento: json['departamento']?.toString(),
       telefone: json['telefone']?.toString(),
@@ -136,6 +136,7 @@ class ProfileModel extends Equatable {
       'id': id,
       'user_id': userId,
       'nome': nome,
+      'email': email,          // ✅ ADICIONADO NO toJson
       'cargo': cargo,
       'departamento': departamento,
       'telefone': telefone,
@@ -153,7 +154,6 @@ class ProfileModel extends Equatable {
     };
   }
 
-  // Getters
   bool get isHyper => nivelAcesso.isHyper;
   bool get isAdmin => nivelAcesso.isAdmin;
   bool get isManager => nivelAcesso.isManager;
@@ -174,5 +174,5 @@ class ProfileModel extends Equatable {
   String get firstName => nome.split(' ').first;
 
   @override
-  List<Object?> get props => [id, userId, nome, nivelAcesso, isActive];
+  List<Object?> get props => [id, userId, nome, email, nivelAcesso, isActive];
 }

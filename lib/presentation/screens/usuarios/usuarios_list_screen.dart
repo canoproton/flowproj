@@ -26,7 +26,7 @@ class UsuariosListScreen extends StatefulWidget {
 class _UsuariosListScreenState extends State<UsuariosListScreen> {
   final TextEditingController _searchController = TextEditingController();
   String? _filtroNivel;
-  bool _filtroAtivo = true;
+  bool? _filtroAtivo = true;
 
   @override
   void initState() {
@@ -44,7 +44,7 @@ class _UsuariosListScreenState extends State<UsuariosListScreen> {
     final provider = context.read<UsuariosProvider>();
     provider.carregarUsuarios(
       search: _searchController.text.isEmpty ? null : _searchController.text,
-      ativo: _filtroAtivo ? true : null,
+      ativo: _filtroAtivo,
       nivel: _filtroNivel != null ? NivelAcesso.fromString(_filtroNivel!) : null,
     );
   }

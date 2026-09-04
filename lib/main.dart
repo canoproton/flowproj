@@ -10,6 +10,7 @@ import 'core/config/supabase_config.dart';
 import 'core/theme/app_theme.dart';
 import 'routes/app_router.dart';
 import 'presentation/providers/auth/auth_provider.dart';
+import 'presentation/providers/usuarios/usuarios_provider.dart'; // ✅ ADICIONAR
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -29,6 +30,10 @@ class MyApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(
           create: (context) => AuthProvider()..initialize(),
+        ),
+        // ✅ ADICIONAR O USUARIOSPROVIDER
+        ChangeNotifierProvider(
+          create: (context) => UsuariosProvider(),
         ),
       ],
       child: MaterialApp.router(
