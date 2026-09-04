@@ -5,6 +5,7 @@
 /// lista, busca e ações rápidas
 /// ============================================
 
+import 'package:flowproj/data/models/auth/profile_model.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';

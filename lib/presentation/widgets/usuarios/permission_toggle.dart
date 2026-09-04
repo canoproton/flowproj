@@ -131,7 +131,6 @@ class _PermissionToggleState extends State<PermissionToggle> {
           onChanged: onChanged,
           activeColor: AppTheme.primaryColor,
           materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-          visualDensity: VisualDensity.compact,
           splashRadius: 16,
         ),
         Text(

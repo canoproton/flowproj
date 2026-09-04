@@ -5,11 +5,11 @@
 /// ============================================
 
 import 'package:flutter/material.dart';
-import '../../data/repositories/usuarios/usuarios_repository.dart';
-import '../../data/repositories/usuarios/permission_repository.dart';
-import '../../data/models/auth/profile_model.dart';
-import '../../data/models/usuarios/permission_model.dart';
-import '../../data/models/usuarios/module_model.dart';
+import 'package:flowproj/data/repositories/usuarios/usuarios_repository.dart';
+import 'package:flowproj/data/repositories/usuarios/permission_repository.dart';
+import 'package:flowproj/data/models/auth/profile_model.dart';
+import 'package:flowproj/data/models/usuarios/permission_model.dart';
+import 'package:flowproj/data/models/usuarios/module_model.dart';
 
 class UsuariosProvider extends ChangeNotifier {
   final UsuariosRepository _repository = UsuariosRepository();

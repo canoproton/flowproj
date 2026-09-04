@@ -5,6 +5,7 @@
 /// seleção de nível de acesso
 /// ============================================
 
+import 'package:flowproj/data/models/auth/profile_model.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
@@ -272,7 +273,7 @@ class _UsuariosFormScreenState extends State<UsuariosFormScreen> {
                     controller: _departamentoController,
                     label: 'Departamento',
                     hint: 'Ex: TI, Financeiro, RH',
-                    icon: Icons.business_outline,
+                    icon: Icons.business,
                   ),
                   const SizedBox(height: 16),
 
