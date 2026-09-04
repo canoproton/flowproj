@@ -5,6 +5,7 @@
 /// ============================================
 
 import 'package:equatable/equatable.dart';
+import 'profile_model.dart';
 
 class UserModel extends Equatable {
   final String id;
@@ -15,6 +16,9 @@ class UserModel extends Equatable {
   final DateTime? createdAt;
   final DateTime? updatedAt;
   final Map<String, dynamic>? metadata;
+  
+  // ✅ NOVO: Nível de acesso do usuário
+  final NivelAcesso? nivelAcesso;
 
   const UserModel({
     required this.id,
@@ -25,6 +29,7 @@ class UserModel extends Equatable {
     this.createdAt,
     this.updatedAt,
     this.metadata,
+    this.nivelAcesso,
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
@@ -41,6 +46,9 @@ class UserModel extends Equatable {
           ? DateTime.parse(json['updated_at'].toString())
           : null,
       metadata: json['metadata'] as Map<String, dynamic>?,
+      nivelAcesso: json['nivel_acesso'] != null
+          ? NivelAcesso.fromString(json['nivel_acesso'].toString())
+          : null,
     );
   }
 
@@ -54,9 +62,11 @@ class UserModel extends Equatable {
       'created_at': createdAt?.toIso8601String(),
       'updated_at': updatedAt?.toIso8601String(),
       'metadata': metadata,
+      'nivel_acesso': nivelAcesso?.name.toUpperCase(),
     };
   }
 
+  /// Iniciais do nome do usuário
   String get initials {
     if (name == null || name!.isEmpty) {
       return email.substring(0, 1).toUpperCase();
@@ -68,6 +78,7 @@ class UserModel extends Equatable {
     return name!.substring(0, 2).toUpperCase();
   }
 
+  /// Nome de exibição (primeiro nome)
   String get displayName {
     if (name == null || name!.isEmpty) {
       return email.split('@').first;
@@ -75,6 +86,14 @@ class UserModel extends Equatable {
     return name!;
   }
 
+  // ✅ NOVOS GETTERS DE PERMISSÃO
+  bool get isHyper => nivelAcesso == NivelAcesso.hyper;
+  bool get isAdmin => nivelAcesso == NivelAcesso.admin || isHyper;
+  bool get isManager => nivelAcesso == NivelAcesso.manager || isAdmin;
+  bool get isSupervisor => nivelAcesso == NivelAcesso.supervisor || isManager;
+  bool get isUser => nivelAcesso == NivelAcesso.user || isSupervisor;
+  bool get isGuest => nivelAcesso == NivelAcesso.guest || isUser;
+
   @override
-  List<Object?> get props => [id, email, name, isActive];
+  List<Object?> get props => [id, email, name, isActive, nivelAcesso];
 }

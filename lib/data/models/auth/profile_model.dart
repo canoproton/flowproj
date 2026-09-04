@@ -63,6 +63,7 @@ enum NivelAcesso {
 class ProfileModel extends Equatable {
   final String id;
   final String userId;
+  final String email;
   final String nome;
   final String? cargo;
   final String? departamento;
@@ -109,6 +110,7 @@ class ProfileModel extends Equatable {
     return ProfileModel(
       id: json['id']?.toString() ?? '',
       userId: json['user_id']?.toString() ?? '',
+      email: json['email']?.toString() ?? '',
       nome: json['nome']?.toString() ?? '',
       cargo: json['cargo']?.toString(),
       departamento: json['departamento']?.toString(),

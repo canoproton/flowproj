@@ -5,6 +5,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:flowproj/data/models/auth/profile_model.dart';
 import '../presentation/screens/auth/login_screen.dart';
 import '../presentation/screens/main_menu_screen.dart';
 import '../presentation/screens/dashboard/dashboard_screen.dart';

@@ -112,12 +112,12 @@ class UsuariosRepository {
 
       // 2. Criar usuário no auth.users
       final authResponse = await _supabase.auth.admin.createUser(
-        email: safeEmail,
-        password: password,
-        emailConfirm: true,
-        userMetadata: {
-          'name': safeNome,
-        },
+        AdminUserAttributes(
+          email: safeEmail,
+          password: password,
+          emailConfirm: true,
+          userMetadata: {'name': safeNome},
+        ),
       );
 
       if (authResponse.user == null) {
@@ -384,14 +384,14 @@ class UsuariosRepository {
   // ============================================
   Future<int> contarUsuarios({bool? ativo}) async {
     try {
-      var query = _supabase.from('profiles').select('id', count: 'exact');
+      var query = _supabase.from('profiles').select('id');
 
       if (ativo != null) {
         query = query.eq('is_active', ativo);
       }
 
       final response = await query;
-      return response.count ?? 0;
+      return response.length;
     } catch (e) {
       return 0;
     }
