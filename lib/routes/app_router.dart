@@ -1,5 +1,5 @@
 /// ============================================
-/// CONFIGURAÇÃO DE ROTAS
+/// CONFIGURAÇÃO DE ROTAS - ATUALIZADA
 /// ============================================
 
 import 'package:flutter/material.dart';
@@ -8,6 +8,9 @@ import 'package:provider/provider.dart';
 import '../presentation/screens/auth/login_screen.dart';
 import '../presentation/screens/main_menu_screen.dart';
 import '../presentation/screens/dashboard/dashboard_screen.dart';
+import '../presentation/screens/usuarios/usuarios_list_screen.dart';
+import '../presentation/screens/usuarios/usuarios_form_screen.dart';
+import '../presentation/screens/usuarios/usuarios_detail_screen.dart';
 import '../presentation/providers/auth/auth_provider.dart';
 
 class AppRouter {
@@ -19,12 +22,10 @@ class AppRouter {
       final isAuthenticated = authProvider.isAuthenticated;
       final isLoginRoute = state.matchedLocation == '/login';
 
-      // Se está autenticado e tenta ir para login, redireciona para /home
       if (isAuthenticated && isLoginRoute) {
         return '/home';
       }
 
-      // Se não está autenticado e tenta ir para qualquer rota protegida
       if (!isAuthenticated && !isLoginRoute) {
         return '/login';
       }
@@ -32,14 +33,14 @@ class AppRouter {
       return null;
     },
     routes: [
-      // Rota de Login (pública)
+      // Login (pública)
       GoRoute(
         path: '/login',
         name: 'login',
         builder: (context, state) => const LoginScreen(),
       ),
 
-      // Rota Home com ShellRoute (menu lateral fixo)
+      // Home com ShellRoute
       ShellRoute(
         builder: (context, state, child) {
           return MainMenuScreen(child: child);
@@ -50,18 +51,37 @@ class AppRouter {
             name: 'home',
             builder: (context, state) => const DashboardScreen(),
             routes: [
+              // Dashboard
               GoRoute(
                 path: 'dashboard',
                 name: 'dashboard',
                 builder: (context, state) => const DashboardScreen(),
               ),
+              // Usuários
               GoRoute(
                 path: 'usuarios',
                 name: 'usuarios',
-                builder: (context, state) => const Center(
-                  child: Text('Usuários - Em desenvolvimento'),
-                ),
+                builder: (context, state) => const UsuariosListScreen(),
+                routes: [
+                  GoRoute(
+                    path: 'form',
+                    name: 'usuarios_form',
+                    builder: (context, state) {
+                      final usuario = state.extra as ProfileModel?;
+                      return UsuariosFormScreen(usuario: usuario);
+                    },
+                  ),
+                  GoRoute(
+                    path: 'detalhes/:id',
+                    name: 'usuarios_detalhes',
+                    builder: (context, state) {
+                      final id = state.pathParameters['id']!;
+                      return UsuariosDetailScreen(id: id);
+                    },
+                  ),
+                ],
               ),
+              // Outros módulos (placeholders)
               GoRoute(
                 path: 'projetos',
                 name: 'projetos',
