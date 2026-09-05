@@ -58,6 +58,54 @@ class AuthRepository {
       // 4. Registrar sucesso
       _rateLimit.registerLoginAttempt(identifier, true);
 
+        // ============================================================
+      // MÉTODO: Verificar e criar perfil se não existir
+      // Adicionar após o método login()
+      // ============================================================
+      Future<ProfileModel?> _ensureProfileExists(User user) async {
+        try {
+          // Verificar se o perfil existe
+          final response = await supabase
+              .from('profiles')
+              .select()
+              .eq('user_id', user.id);
+          
+          if (response.isEmpty) {
+            print('🔍 [PROFILE] Criando perfil para usuário: ${user.email}');
+            
+            // Criar perfil
+            final profileData = {
+              'user_id': user.id,
+              'email': user.email,
+              'nome': user.userMetadata?['nome'] ?? 
+                      user.email?.split('@').first ?? 'Usuário',
+              'ativo': true,
+              'created_at': DateTime.now().toIso8601String(),
+            };
+            
+            await supabase
+                .from('profiles')
+                .insert(profileData);
+            
+            // Buscar o perfil criado
+            final newProfile = await supabase
+                .from('profiles')
+                .select()
+                .eq('user_id', user.id)
+                .single();
+            
+            print('✅ [PROFILE] Perfil criado com sucesso!');
+            return ProfileModel.fromJson(newProfile);
+          }
+          
+          print('✅ [PROFILE] Perfil já existe para o usuário');
+          return ProfileModel.fromJson(response[0]);
+        } catch (e) {
+          print('❌ [PROFILE] Erro ao garantir perfil: $e');
+          return null;
+        }
+      }
+
       // 5. Buscar perfil
       final profile = await _getProfile(response.user!.id);
       print('🔍 [LOGIN] Perfil: $profile');
