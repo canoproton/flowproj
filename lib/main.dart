@@ -1,23 +1,19 @@
-/// ============================================
-/// PONTO DE ENTRADA DO APLICATIVO
-/// ============================================
-
 import 'package:flutter/material.dart';
+import 'package:flowproj/routes/app_router.dart';
 import 'package:provider/provider.dart';
+import 'presentation/providers/auth/auth_provider.dart';
+import 'core/config/supabase_config.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
-import 'core/config/supabase_config.dart';
-import 'core/theme/app_theme.dart';
-import 'routes/app_router.dart';
-import 'presentation/providers/auth/auth_provider.dart';
-import 'presentation/providers/usuarios/usuarios_provider.dart'; // ✅ ADICIONAR
-
-Future<void> main() async {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  await dotenv.load(fileName: '.env');
-  await SupabaseConfig.init();
-
+  
+  // Carregar variáveis de ambiente
+  await dotenv.load();
+  
+  // Inicializar Supabase
+  await SupabaseConfig.initialize();
+  
   runApp(const MyApp());
 }
 
@@ -28,17 +24,14 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider(
-          create: (context) => AuthProvider()..initialize(),
-        ),
-        // ✅ ADICIONAR O USUARIOSPROVIDER
-        ChangeNotifierProvider(
-          create: (context) => UsuariosProvider(),
-        ),
+        ChangeNotifierProvider(create: (_) => AuthProvider()),
       ],
       child: MaterialApp.router(
         title: 'SocialFlow',
-        theme: AppTheme.lightTheme,
+        theme: ThemeData(
+          primarySwatch: Colors.blue,
+          useMaterial3: true,
+        ),
         routerConfig: AppRouter.router,
         debugShowCheckedModeBanner: false,
       ),
