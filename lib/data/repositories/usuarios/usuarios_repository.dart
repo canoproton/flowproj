@@ -25,16 +25,12 @@ class UsuariosRepository {
     NivelAcesso? nivel,
   }) async {
     try {
-      var query = _supabase
-          .from('profiles')
-          .select('*, auth_users!user_id(email)');
+      // Buscar todos os perfis sem JOIN
+      var query = _supabase.from('profiles').select();
 
       if (search != null && search.isNotEmpty) {
         final safeSearch = _security.sanitizeInput(search);
-        query = query.or(
-          'nome.ilike.%$safeSearch%,'
-          'auth_users.email.ilike.%$safeSearch%'
-        );
+        query = query.ilike('nome', '%$safeSearch%');
       }
 
       if (ativo != null) {
@@ -47,6 +43,7 @@ class UsuariosRepository {
 
       final response = await query.order('nome', ascending: true);
 
+      // Converter para ProfileModel
       return (response as List)
           .map((item) => ProfileModel.fromJson(item))
           .toList();
@@ -62,7 +59,7 @@ class UsuariosRepository {
     try {
       final response = await _supabase
           .from('profiles')
-          .select('*, auth_users!user_id(email)')
+          .select()
           .eq('id', id)
           .maybeSingle();
 
@@ -80,7 +77,7 @@ class UsuariosRepository {
     try {
       final response = await _supabase
           .from('profiles')
-          .select('*, auth_users!user_id(email)')
+          .select()
           .eq('user_id', userId)
           .maybeSingle();
 
@@ -394,6 +391,24 @@ class UsuariosRepository {
       return response.length;
     } catch (e) {
       return 0;
+    }
+  }
+
+  // ============================================
+  // 15. BUSCAR EMAIL DO USUÁRIO NO AUTH
+  // ============================================
+  Future<String?> buscarEmailPorUserId(String userId) async {
+    try {
+      final response = await _supabase
+          .from('auth.users')
+          .select('email')
+          .eq('id', userId)
+          .maybeSingle();
+      
+      return response?['email']?.toString();
+    } catch (e) {
+      print('Erro ao buscar email: $e');
+      return null;
     }
   }
 }

@@ -6,6 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/middleware/security_middleware.dart';
 import '../../../core/services/security/rate_limit_service.dart';
 import '../../models/auth/user_model.dart';
+import '../../models/auth/profile_model.dart';
 
 class AuthRepository {
   final SupabaseClient _supabase = Supabase.instance.client;
@@ -36,7 +37,6 @@ class AuthRepository {
 
       // 3. Tentar login
       print('🔍 [LOGIN] Chamando Supabase Auth...');
-      // problema de versao print('🔍 [LOGIN] URL: ${_supabase.auth.authUrl}');
       
       final response = await _supabase.auth.signInWithPassword(
         email: safeEmail,
@@ -58,56 +58,8 @@ class AuthRepository {
       // 4. Registrar sucesso
       _rateLimit.registerLoginAttempt(identifier, true);
 
-        // ============================================================
-      // MÉTODO: Verificar e criar perfil se não existir
-      // Adicionar após o método login()
-      // ============================================================
-      Future<ProfileModel?> _ensureProfileExists(User user) async {
-        try {
-          // Verificar se o perfil existe
-          final response = await supabase
-              .from('profiles')
-              .select()
-              .eq('user_id', user.id);
-          
-          if (response.isEmpty) {
-            print('🔍 [PROFILE] Criando perfil para usuário: ${user.email}');
-            
-            // Criar perfil
-            final profileData = {
-              'user_id': user.id,
-              'email': user.email,
-              'nome': user.userMetadata?['nome'] ?? 
-                      user.email?.split('@').first ?? 'Usuário',
-              'ativo': true,
-              'created_at': DateTime.now().toIso8601String(),
-            };
-            
-            await supabase
-                .from('profiles')
-                .insert(profileData);
-            
-            // Buscar o perfil criado
-            final newProfile = await supabase
-                .from('profiles')
-                .select()
-                .eq('user_id', user.id)
-                .single();
-            
-            print('✅ [PROFILE] Perfil criado com sucesso!');
-            return ProfileModel.fromJson(newProfile);
-          }
-          
-          print('✅ [PROFILE] Perfil já existe para o usuário');
-          return ProfileModel.fromJson(response[0]);
-        } catch (e) {
-          print('❌ [PROFILE] Erro ao garantir perfil: $e');
-          return null;
-        }
-      }
-
-      // 5. Buscar perfil
-      final profile = await _getProfile(response.user!.id);
+      // 5. Garantir que o perfil existe
+      final profile = await _ensureProfileExists(response.user!);
       print('🔍 [LOGIN] Perfil: $profile');
 
       // 6. Atualizar last_login
@@ -116,9 +68,9 @@ class AuthRepository {
       final user = UserModel(
         id: response.user!.id,
         email: response.user!.email ?? '',
-        name: profile['nome']?.toString() ?? response.user!.email?.split('@').first,
-        avatarUrl: profile['avatar_url']?.toString(),
-        isActive: profile['is_active'] ?? true,
+        name: profile?.nome ?? response.user!.email?.split('@').first ?? 'Usuário',
+        avatarUrl: profile?.avatarUrl,
+        isActive: profile?.isActive ?? true,
         createdAt: response.user!.createdAt != null 
             ? DateTime.parse(response.user!.createdAt!) 
             : null,
@@ -150,7 +102,56 @@ class AuthRepository {
     }
   }
 
-  Future<Map<String, dynamic>> _getProfile(String userId) async {
+  // ============================================================
+  // MÉTODO: Verificar e criar perfil se não existir
+  // ============================================================
+  Future<ProfileModel?> _ensureProfileExists(User user) async {
+    try {
+      print('🔍 [PROFILE] Verificando perfil para usuário: ${user.id}');
+      
+      // Verificar se o perfil existe
+      final response = await _supabase
+          .from('profiles')
+          .select()
+          .eq('user_id', user.id);
+      
+      if (response.isEmpty) {
+        print('🔍 [PROFILE] Criando perfil para usuário: ${user.email}');
+        
+        // Criar perfil
+        final profileData = {
+          'user_id': user.id,
+          'email': user.email,
+          'nome': user.userMetadata?['nome'] ?? 
+                  user.email?.split('@').first ?? 'Usuário',
+          'is_active': true,
+          'created_at': DateTime.now().toIso8601String(),
+        };
+        
+        await _supabase
+            .from('profiles')
+            .insert(profileData);
+        
+        // Buscar o perfil criado
+        final newProfile = await _supabase
+            .from('profiles')
+            .select()
+            .eq('user_id', user.id)
+            .single();
+        
+        print('✅ [PROFILE] Perfil criado com sucesso!');
+        return ProfileModel.fromJson(newProfile);
+      }
+      
+      print('✅ [PROFILE] Perfil já existe para o usuário');
+      return ProfileModel.fromJson(response[0]);
+    } catch (e) {
+      print('❌ [PROFILE] Erro ao garantir perfil: $e');
+      return null;
+    }
+  }
+
+  Future<ProfileModel?> _getProfile(String userId) async {
     try {
       print('🔍 [LOGIN] Buscando perfil para user_id: $userId');
       final response = await _supabase
@@ -159,10 +160,10 @@ class AuthRepository {
           .eq('user_id', userId)
           .maybeSingle();
       print('🔍 [LOGIN] Perfil encontrado: $response');
-      return response as Map<String, dynamic>? ?? {};
+      return response != null ? ProfileModel.fromJson(response) : null;
     } catch (e) {
       print('❌ [LOGIN] Erro ao buscar perfil: $e');
-      return {};
+      return null;
     }
   }
 
