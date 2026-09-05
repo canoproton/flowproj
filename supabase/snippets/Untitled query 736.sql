@@ -1,7 +1,6 @@
-SELECT 'profiles' as tabela, COUNT(*) as total FROM public.profiles
-UNION ALL
-SELECT 'tb_ocont', COUNT(*) FROM public.tb_ocont
-UNION ALL
-SELECT 'modules', COUNT(*) FROM public.modules
-UNION ALL
-SELECT 'permissions', COUNT(*) FROM public.permissions;
+SELECT
+    conname,
+    conrelid::regclass AS table_name,
+    confrelid::regclass AS foreign_table
+FROM pg_constraint
+WHERE conname = 'fk_profiles_user_id';

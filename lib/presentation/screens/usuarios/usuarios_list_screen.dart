@@ -31,7 +31,10 @@ class _UsuariosListScreenState extends State<UsuariosListScreen> {
   @override
   void initState() {
     super.initState();
-    _carregarUsuarios();
+    // WidgetsBinding para carregar após a montagem - vamos ver se funciona
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _carregarUsuarios();  
+    });
   }
 
   @override
