@@ -1,92 +1,106 @@
-/// ============================================
-/// PROVIDER DE USUÁRIOS
-/// ============================================
-/// Gerencia o estado do módulo de usuários
-/// ============================================
-
 import 'package:flutter/material.dart';
-import 'package:flowproj/data/repositories/usuarios/usuarios_repository.dart';
-import 'package:flowproj/data/repositories/usuarios/permission_repository.dart';
-import 'package:flowproj/data/models/auth/profile_model.dart';
-import 'package:flowproj/data/models/usuarios/permission_model.dart';
-import 'package:flowproj/data/models/usuarios/module_model.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../../data/models/auth/profile_model.dart';
+import '../../../data/models/usuarios/permission_model.dart';
+import '../../../data/models/usuarios/module_model.dart';
+import '../../../data/repositories/usuarios/usuarios_repository.dart';
 
 class UsuariosProvider extends ChangeNotifier {
   final UsuariosRepository _repository = UsuariosRepository();
-  final PermissionRepository _permissionRepository = PermissionRepository();
-
+  
+  // Estado
   List<ProfileModel> _usuarios = [];
-  ProfileModel? _usuarioSelecionado;
   List<PermissionModel> _permissoes = [];
   List<ModuleModel> _modulos = [];
+  ProfileModel? _usuarioSelecionado;
   bool _isLoading = false;
+  bool _isLoadingDetail = false;
   String? _error;
+  String? _searchQuery;
+  bool _mostrarInativos = false;
 
   // Getters
   List<ProfileModel> get usuarios => _usuarios;
-  ProfileModel? get usuarioSelecionado => _usuarioSelecionado;
+  List<ProfileModel> get usuariosFiltrados {
+    var list = _usuarios;
+    if (!_mostrarInativos) {
+      list = list.where((u) => u.isActive).toList();
+    }
+    if (_searchQuery != null && _searchQuery!.isNotEmpty) {
+      final query = _searchQuery!.toLowerCase();
+      list = list.where((u) => 
+        u.nome.toLowerCase().contains(query) ||
+        u.userId.toLowerCase().contains(query)
+      ).toList();
+    }
+    return list;
+  }
   List<PermissionModel> get permissoes => _permissoes;
   List<ModuleModel> get modulos => _modulos;
+  ProfileModel? get usuarioSelecionado => _usuarioSelecionado;
   bool get isLoading => _isLoading;
+  bool get isLoadingDetail => _isLoadingDetail;
   String? get error => _error;
-  int get totalUsuarios => _usuarios.length;
-  int get usuariosAtivos => _usuarios.where((u) => u.isActive).length;
+  bool get mostrarInativos => _mostrarInativos;
+  String? get searchQuery => _searchQuery;
 
   // ============================================
-  // 1. CARREGAR USUÁRIOS
+  // MÉTODOS DE CARREGAMENTO
   // ============================================
-  Future<void> carregarUsuarios({
-    String? search,
-    bool? ativo,
-    NivelAcesso? nivel,
-  }) async {
+
+  Future<void> carregarUsuarios() async {
     _isLoading = true;
     _error = null;
     notifyListeners();
 
     try {
       _usuarios = await _repository.listarUsuarios(
-        search: search,
-        ativo: ativo,
-        nivel: nivel,
+        search: _searchQuery,
+        ativo: _mostrarInativos ? null : true,
       );
-      _isLoading = false;
-      notifyListeners();
+      _error = null;
     } catch (e) {
-      _isLoading = false;
       _error = e.toString();
+      _usuarios = [];
+    } finally {
+      _isLoading = false;
       notifyListeners();
     }
   }
 
-  // ============================================
-  // 2. SELECIONAR USUÁRIO
-  // ============================================
   Future<void> selecionarUsuario(String id) async {
-    _isLoading = true;
+    _isLoadingDetail = true;
     _error = null;
+    _usuarioSelecionado = null;
+    _permissoes = [];
     notifyListeners();
 
     try {
+      // Buscar usuário
       _usuarioSelecionado = await _repository.buscarUsuarioPorId(id);
+      
       if (_usuarioSelecionado != null) {
-        await _carregarPermissoes(_usuarioSelecionado!.id);
-        await _carregarModulos();
+        // Buscar permissões
+        _permissoes = await _repository.listarPermissoes(_usuarioSelecionado!.id);
+        // Buscar módulos
+        _modulos = await _repository._buscarModules();
       }
-      _isLoading = false;
-      notifyListeners();
+      
+      _error = null;
     } catch (e) {
-      _isLoading = false;
       _error = e.toString();
+      _usuarioSelecionado = null;
+      _permissoes = [];
+    } finally {
+      _isLoadingDetail = false;
       notifyListeners();
     }
   }
 
   // ============================================
-  // 3. CRIAR USUÁRIO
+  // MÉTODOS DE CRUD
   // ============================================
-  Future<ProfileModel?> criarUsuario({
+
+  Future<void> criarUsuario({
     required String email,
     required String password,
     required String nome,
@@ -102,7 +116,7 @@ class UsuariosProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final usuario = await _repository.criarUsuario(
+      await _repository.criarUsuario(
         email: email,
         password: password,
         nome: nome,
@@ -113,23 +127,17 @@ class UsuariosProvider extends ChangeNotifier {
         avatarUrl: avatarUrl,
         contatoId: contatoId,
       );
-
       await carregarUsuarios();
-      _isLoading = false;
-      notifyListeners();
-      return usuario;
     } catch (e) {
-      _isLoading = false;
       _error = e.toString();
+      rethrow;
+    } finally {
+      _isLoading = false;
       notifyListeners();
-      return null;
     }
   }
 
-  // ============================================
-  // 4. ATUALIZAR USUÁRIO
-  // ============================================
-  Future<ProfileModel?> atualizarUsuario({
+  Future<void> atualizarUsuario({
     required String id,
     String? nome,
     String? cargo,
@@ -144,7 +152,7 @@ class UsuariosProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final usuario = await _repository.atualizarUsuario(
+      await _repository.atualizarUsuario(
         id: id,
         nome: nome,
         cargo: cargo,
@@ -154,28 +162,20 @@ class UsuariosProvider extends ChangeNotifier {
         nivelAcesso: nivelAcesso,
         isActive: isActive,
       );
-
       await carregarUsuarios();
-
       if (_usuarioSelecionado?.id == id) {
-        _usuarioSelecionado = usuario;
+        await selecionarUsuario(id);
       }
-
-      _isLoading = false;
-      notifyListeners();
-      return usuario;
     } catch (e) {
-      _isLoading = false;
       _error = e.toString();
+      rethrow;
+    } finally {
+      _isLoading = false;
       notifyListeners();
-      return null;
     }
   }
 
-  // ============================================
-  // 5. DESATIVAR USUÁRIO
-  // ============================================
-  Future<bool> desativarUsuario(String id) async {
+  Future<void> desativarUsuario(String id) async {
     _isLoading = true;
     _error = null;
     notifyListeners();
@@ -183,27 +183,19 @@ class UsuariosProvider extends ChangeNotifier {
     try {
       await _repository.desativarUsuario(id);
       await carregarUsuarios();
-
       if (_usuarioSelecionado?.id == id) {
-        _usuarioSelecionado = null;
-        _permissoes = [];
+        await selecionarUsuario(id);
       }
-
-      _isLoading = false;
-      notifyListeners();
-      return true;
     } catch (e) {
-      _isLoading = false;
       _error = e.toString();
+      rethrow;
+    } finally {
+      _isLoading = false;
       notifyListeners();
-      return false;
     }
   }
 
-  // ============================================
-  // 6. ATIVAR USUÁRIO
-  // ============================================
-  Future<bool> ativarUsuario(String id) async {
+  Future<void> ativarUsuario(String id) async {
     _isLoading = true;
     _error = null;
     notifyListeners();
@@ -211,97 +203,75 @@ class UsuariosProvider extends ChangeNotifier {
     try {
       await _repository.ativarUsuario(id);
       await carregarUsuarios();
-      _isLoading = false;
-      notifyListeners();
-      return true;
-    } catch (e) {
-      _isLoading = false;
-      _error = e.toString();
-      notifyListeners();
-      return false;
-    }
-  }
-
-  // ============================================
-  // 7. CARREGAR PERMISSÕES
-  // ============================================
-  Future<void> _carregarPermissoes(String profileId) async {
-    try {
-      _permissoes = await _permissionRepository.buscarPermissoesPorUsuario(profileId);
-    } catch (e) {
-      _permissoes = [];
-    }
-  }
-
-  // ============================================
-  // 8. CARREGAR MÓDULOS
-  // ============================================
-  Future<void> _carregarModulos() async {
-    try {
-      final response = await Supabase.instance.client
-          .from('modules')
-          .select()
-          .eq('is_active', true)
-          .order('ordem', ascending: true);
-
-      _modulos = (response as List)
-          .map((item) => ModuleModel.fromJson(item))
-          .toList();
-    } catch (e) {
-      _modulos = ModuleConstants.defaultModules;
-    }
-  }
-
-  // ============================================
-  // 9. ATUALIZAR PERMISSÃO
-  // ============================================
-  Future<bool> atualizarPermissao(PermissionModel permissao) async {
-    try {
-      await _permissionRepository.salvarPermissao(permissao);
-
-      // Atualizar lista local
-      final index = _permissoes.indexWhere((p) => p.id == permissao.id);
-      if (index != -1) {
-        _permissoes[index] = permissao;
-      } else {
-        _permissoes.add(permissao);
+      if (_usuarioSelecionado?.id == id) {
+        await selecionarUsuario(id);
       }
-
-      notifyListeners();
-      return true;
     } catch (e) {
       _error = e.toString();
+      rethrow;
+    } finally {
+      _isLoading = false;
       notifyListeners();
-      return false;
     }
   }
 
   // ============================================
-  // 10. BUSCAR USUÁRIOS POR NÍVEL
+  // MÉTODOS DE PERMISSÕES
   // ============================================
-  List<ProfileModel> getUsuariosPorNivel(NivelAcesso nivel) {
-    return _usuarios.where((u) => u.nivelAcesso == nivel).toList();
-  }
 
-  // ============================================
-  // 11. LIMPAR SELEÇÃO
-  // ============================================
-  void limparSelecao() {
-    _usuarioSelecionado = null;
-    _permissoes = [];
-    notifyListeners();
-  }
-
-  // ============================================
-  // 12. RESETAR ESTADO
-  // ============================================
-  void resetState() {
-    _usuarios = [];
-    _usuarioSelecionado = null;
-    _permissoes = [];
-    _modulos = [];
-    _isLoading = false;
+  Future<void> atualizarPermissao(PermissionModel permissao) async {
+    _isLoading = true;
     _error = null;
     notifyListeners();
+
+    try {
+      await _repository.atualizarPermissao(permissao);
+      // Recarregar permissões
+      if (_usuarioSelecionado != null) {
+        _permissoes = await _repository.listarPermissoes(_usuarioSelecionado!.id);
+      }
+    } catch (e) {
+      _error = e.toString();
+      rethrow;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  // ============================================
+  // MÉTODOS DE FILTRO E BUSCA
+  // ============================================
+
+  void setSearchQuery(String? query) {
+    _searchQuery = query;
+    notifyListeners();
+    carregarUsuarios();
+  }
+
+  void toggleMostrarInativos() {
+    _mostrarInativos = !_mostrarInativos;
+    notifyListeners();
+    carregarUsuarios();
+  }
+
+  void limparFiltros() {
+    _searchQuery = null;
+    _mostrarInativos = false;
+    notifyListeners();
+    carregarUsuarios();
+  }
+
+  void limparErro() {
+    _error = null;
+    notifyListeners();
+  }
+
+  // ============================================
+  // MÉTODO DE RECARREGAR
+  // ============================================
+
+  Future<void> recarregar() async {
+    await carregarUsuarios();
   }
 }
