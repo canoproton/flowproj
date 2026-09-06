@@ -1,4 +1,4 @@
-import '../../auth/profile_model.dart';
+import '../../models/auth/profile_model.dart';
 
 class PermissionModel {
   final String profileId;
@@ -71,27 +71,31 @@ class PermissionModel {
     bool canWrite = false;
     bool canDelete = false;
 
-    switch (nivel) {
-      case NivelAcesso.ADMIN:
-        canRead = true;
-        canWrite = true;
-        canDelete = true;
-        break;
-      case NivelAcesso.MANAGER:
-        canRead = true;
-        canWrite = true;
-        canDelete = false;
-        break;
-      case NivelAcesso.USER:
-        canRead = true;
-        canWrite = false;
-        canDelete = false;
-        break;
-      case NivelAcesso.VIEWER:
-        canRead = true;
-        canWrite = false;
-        canDelete = false;
-        break;
+    // Usar os valores corretos do enum NivelAcesso
+    if (nivel == NivelAcesso.hyper) {
+      canRead = true;
+      canWrite = true;
+      canDelete = true;
+    } else if (nivel == NivelAcesso.admin) {
+      canRead = true;
+      canWrite = true;
+      canDelete = true;
+    } else if (nivel == NivelAcesso.manager) {
+      canRead = true;
+      canWrite = true;
+      canDelete = false;
+    } else if (nivel == NivelAcesso.supervisor) {
+      canRead = true;
+      canWrite = false;
+      canDelete = false;
+    } else if (nivel == NivelAcesso.user) {
+      canRead = true;
+      canWrite = false;
+      canDelete = false;
+    } else if (nivel == NivelAcesso.guest) {
+      canRead = false;
+      canWrite = false;
+      canDelete = false;
     }
 
     return PermissionModel(
