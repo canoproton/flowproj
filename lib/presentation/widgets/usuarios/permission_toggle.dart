@@ -1,17 +1,9 @@
-/// ============================================
-/// PERMISSION TOGGLE
-/// ============================================
-/// Widget para exibir e editar permissões
-/// de um módulo específico
-/// ============================================
-
 import 'package:flutter/material.dart';
-import '../../../core/theme/app_theme.dart';
 import '../../../data/models/usuarios/module_model.dart';
 import '../../../data/models/usuarios/permission_model.dart';
 
-class PermissionToggle extends StatefulWidget {
-  final ModuleModel module;
+class PermissionToggle extends StatelessWidget {
+  final ModuleModel module;  // ← Mudar de 'modulo' para 'module'
   final PermissionModel permissao;
   final Function(PermissionModel) onChanged;
 
@@ -23,191 +15,135 @@ class PermissionToggle extends StatefulWidget {
   });
 
   @override
-  State<PermissionToggle> createState() => _PermissionToggleState();
-}
-
-class _PermissionToggleState extends State<PermissionToggle> {
-  late PermissionModel _permissao;
-
-  @override
-  void initState() {
-    super.initState();
-    _permissao = widget.permissao;
-  }
-
-  @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      decoration: BoxDecoration(
-        border: Border(
-          bottom: BorderSide(color: Colors.grey.shade100),
-        ),
-      ),
-      child: Row(
-        children: [
-          // Ícone do módulo
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: AppTheme.primaryColor.withAlpha(13),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(
-              _getIconData(widget.module.icone ?? ''),
-              size: 20,
-              color: AppTheme.primaryColor,
-            ),
-          ),
-          const SizedBox(width: 12),
-          // Nome do módulo
-          Expanded(
-            flex: 2,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
               children: [
-                Text(
-                  widget.module.nome,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                    color: AppTheme.textPrimary,
+                Icon(
+                  _getIconForModule(module.nome),
+                  color: module.isActive ? Colors.blue : Colors.grey,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        module.nome,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                      if (module.descricao != null)
+                        Text(
+                          module.descricao!,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey.shade600,
+                          ),
+                        ),
+                    ],
                   ),
                 ),
-                if (widget.module.descricao != null)
-                  Text(
-                    widget.module.descricao!,
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: Colors.grey.shade500,
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: module.isActive ? Colors.green : Colors.red,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    module.isActive ? 'Ativo' : 'Inativo',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
                     ),
                   ),
+                ),
               ],
             ),
-          ),
-          // Toggles
-          Expanded(
-            flex: 3,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                _buildToggle('Ler', _permissao.canRead, (value) {
-                  _atualizarPermissao(
-                    _permissao.copyWith(canRead: value),
-                  );
-                }),
-                const SizedBox(width: 4),
-                _buildToggle('Criar', _permissao.canCreate, (value) {
-                  _atualizarPermissao(
-                    _permissao.copyWith(canCreate: value),
-                  );
-                }),
-                const SizedBox(width: 4),
-                _buildToggle('Editar', _permissao.canEdit, (value) {
-                  _atualizarPermissao(
-                    _permissao.copyWith(canEdit: value),
-                  );
-                }),
-                const SizedBox(width: 4),
-                _buildToggle('Excluir', _permissao.canDelete, (value) {
-                  _atualizarPermissao(
-                    _permissao.copyWith(canDelete: value),
-                  );
-                }),
-              ],
-            ),
-          ),
-        ],
+            if (module.isActive) ...[
+              const Divider(),
+              Row(
+                children: [
+                  _buildPermissionChip(
+                    label: 'Ler',
+                    value: permissao.canRead,
+                    onChanged: (value) {
+                      onChanged(permissao.copyWith(canRead: value));
+                    },
+                  ),
+                  const SizedBox(width: 8),
+                  _buildPermissionChip(
+                    label: 'Escrever',
+                    value: permissao.canWrite,
+                    onChanged: (value) {
+                      onChanged(permissao.copyWith(canWrite: value));
+                    },
+                  ),
+                  const SizedBox(width: 8),
+                  _buildPermissionChip(
+                    label: 'Deletar',
+                    value: permissao.canDelete,
+                    onChanged: (value) {
+                      onChanged(permissao.copyWith(canDelete: value));
+                    },
+                  ),
+                ],
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildToggle(String label, bool value, Function(bool) onChanged) {
-    return Column(
-      children: [
-        Switch(
-          value: value,
-          onChanged: onChanged,
-          activeColor: AppTheme.primaryColor,
-          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-          splashRadius: 16,
-        ),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 10,
-            color: value ? AppTheme.primaryColor : Colors.grey.shade400,
-            fontWeight: value ? FontWeight.w500 : FontWeight.w400,
-          ),
-        ),
-      ],
+  Widget _buildPermissionChip({
+    required String label,
+    required bool value,
+    required Function(bool) onChanged,
+  }) {
+    return FilterChip(
+      label: Text(label),
+      selected: value,
+      onSelected: onChanged,
+      selectedColor: Colors.blue.shade100,
+      backgroundColor: Colors.grey.shade200,
+      checkmarkColor: Colors.blue,
     );
   }
 
-  void _atualizarPermissao(PermissionModel novaPermissao) {
-    setState(() {
-      _permissao = novaPermissao;
-    });
-    widget.onChanged(novaPermissao);
-  }
-
-  IconData _getIconData(String iconName) {
-    switch (iconName) {
+  IconData _getIconForModule(String nome) {
+    switch (nome.toLowerCase()) {
       case 'dashboard':
         return Icons.dashboard;
-      case 'people':
+      case 'usuários':
         return Icons.people;
-      case 'folder':
+      case 'projetos':
         return Icons.folder;
-      case 'checklist':
-        return Icons.checklist;
-      case 'local_shipping':
-        return Icons.local_shipping;
-      case 'account_balance':
+      case 'tarefas':
+        return Icons.task;
+      case 'operacional':
+        return Icons.build;
+      case 'contabilidade':
         return Icons.account_balance;
-      case 'attach_money':
+      case 'financeiro':
         return Icons.attach_money;
-      case 'folder_open':
-        return Icons.folder_open;
-      case 'psychology':
+      case 'documentos':
+        return Icons.description;
+      case 'ia':
         return Icons.psychology;
-      case 'settings':
-        return Icons.settings;
-      case 'history':
-        return Icons.history;
       default:
-        return Icons.grid_view;
+        return Icons.circle;
     }
-  }
-}
-
-extension PermissionModelCopyWith on PermissionModel {
-  PermissionModel copyWith({
-    String? id,
-    String? profileId,
-    String? moduleId,
-    bool? canRead,
-    bool? canCreate,
-    bool? canEdit,
-    bool? canDelete,
-    bool? canExport,
-    bool? isCustom,
-    DateTime? createdAt,
-    DateTime? updatedAt,
-  }) {
-    return PermissionModel(
-      id: id ?? this.id,
-      profileId: profileId ?? this.profileId,
-      moduleId: moduleId ?? this.moduleId,
-      canRead: canRead ?? this.canRead,
-      canCreate: canCreate ?? this.canCreate,
-      canEdit: canEdit ?? this.canEdit,
-      canDelete: canDelete ?? this.canDelete,
-      canExport: canExport ?? this.canExport,
-      isCustom: isCustom ?? this.isCustom,
-      createdAt: createdAt ?? this.createdAt,
-      updatedAt: updatedAt ?? this.updatedAt,
-    );
   }
 }

@@ -1,35 +1,32 @@
-/// ============================================
-/// EMPTY STATE WIDGET
-/// ============================================
-/// Widget exibido quando não há dados
-/// ============================================
-
 import 'package:flutter/material.dart';
-import '../../../core/theme/app_theme.dart';
 
 class EmptyStateWidget extends StatelessWidget {
-  final IconData icon;
   final String title;
-  final String subtitle;
+  final String subtitle;  // ← Mudar de 'description' para 'subtitle'
+  final IconData icon;
+  final String buttonText;
+  final VoidCallback onPressed;
 
   const EmptyStateWidget({
     super.key,
-    required this.icon,
     required this.title,
     required this.subtitle,
+    required this.icon,
+    required this.buttonText,
+    required this.onPressed,
   });
 
   @override
   Widget build(BuildContext context) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(32),
+        padding: const EdgeInsets.all(32.0),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
               icon,
-              size: 64,
+              size: 80,
               color: Colors.grey.shade400,
             ),
             const SizedBox(height: 16),
@@ -38,7 +35,6 @@ class EmptyStateWidget extends StatelessWidget {
               style: const TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
-                color: AppTheme.textPrimary,
               ),
               textAlign: TextAlign.center,
             ),
@@ -46,10 +42,22 @@ class EmptyStateWidget extends StatelessWidget {
             Text(
               subtitle,
               style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey.shade500,
+                fontSize: 16,
+                color: Colors.grey.shade600,
               ),
               textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              onPressed: onPressed,
+              icon: const Icon(Icons.add),
+              label: Text(buttonText),
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 12,
+                ),
+              ),
             ),
           ],
         ),

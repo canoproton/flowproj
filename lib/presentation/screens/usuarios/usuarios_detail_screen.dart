@@ -1,307 +1,303 @@
-/// ============================================
-/// DETALHES DO USUÁRIO
-/// ============================================
-/// Exibe informações detalhadas do usuário
-/// e permite gerenciar permissões
-/// ============================================
-import 'package:flowproj/data/models/auth/profile_model.dart';
-import 'package:flowproj/data/models/usuarios/permission_model.dart';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../data/models/auth/profile_model.dart';
+import '../../../data/models/usuarios/permission_model.dart';
 import '../../providers/usuarios/usuarios_provider.dart';
-import '../../providers/auth/auth_provider.dart';
 import '../../widgets/common/loading_widget.dart';
 import '../../widgets/usuarios/permission_toggle.dart';
-import '../auth/login_screen.dart';
 
 class UsuariosDetailScreen extends StatefulWidget {
   final String id;
 
-  const UsuariosDetailScreen({super.key, required this.id});
+  const UsuariosDetailScreen({
+    super.key,
+    required this.id,
+  });
 
   @override
   State<UsuariosDetailScreen> createState() => _UsuariosDetailScreenState();
 }
 
 class _UsuariosDetailScreenState extends State<UsuariosDetailScreen> {
-  bool _isLoading = true;
-  bool _isSaving = false;
-
   @override
   void initState() {
     super.initState();
-    _carregarDados();
+    _carregarDetalhes();
   }
 
-  Future<void> _carregarDados() async {
-    setState(() => _isLoading = true);
-    await context.read<UsuariosProvider>().selecionarUsuario(widget.id);
-    setState(() => _isLoading = false);
+  void _carregarDetalhes() {
+    final provider = context.read<UsuariosProvider>();
+    provider.selecionarUsuario(widget.id);
   }
 
   @override
   Widget build(BuildContext context) {
-    final provider = context.watch<UsuariosProvider>();
-    final usuario = provider.usuarioSelecionado;
-    final authProvider = context.watch<AuthProvider>();
-    final podeGerenciar = authProvider.currentUser?.isAdmin ?? false;
-
-    if (_isLoading || provider.isLoading) {
-      return const Scaffold(
-        body: LoadingWidget(message: 'Carregando...'),
-      );
-    }
-
-    if (usuario == null) {
-      return Scaffold(
-        appBar: AppBar(
-          title: const Text('Usuário não encontrado'),
-          backgroundColor: AppTheme.dangerColor,
-          foregroundColor: Colors.white,
-        ),
-        body: const Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.person_off, size: 64, color: AppTheme.dangerColor),
-              SizedBox(height: 16),
-              Text('Usuário não encontrado'),
-            ],
-          ),
-        ),
-      );
-    }
-
     return Scaffold(
-      backgroundColor: AppTheme.backgroundLight,
       appBar: AppBar(
-        title: Text(usuario.nome),
+        title: const Text('Detalhes do Usuário'),
         backgroundColor: AppTheme.primaryColor,
         foregroundColor: Colors.white,
         actions: [
-          if (podeGerenciar)
-            IconButton(
-              icon: const Icon(Icons.edit),
-              onPressed: () {
-                context.push('/usuarios/form', extra: usuario);
-              },
-              tooltip: 'Editar',
-            ),
+          IconButton(
+            icon: const Icon(Icons.edit),
+            onPressed: () {
+              context.push('/home/usuarios/form', extra: widget.id);
+            },
+          ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            // Card do Perfil
-            _buildPerfilCard(usuario),
-            const SizedBox(height: 16),
+      body: Consumer<UsuariosProvider>(
+        builder: (context, provider, child) {
+          if (provider.isLoadingDetail) {
+            return const LoadingWidget();
+          }
 
-            // Estatísticas
-            _buildStatsCard(usuario),
-            const SizedBox(height: 16),
+          if (provider.error != null) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    Icons.error_outline,
+                    size: 64,
+                    color: Colors.red,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Erro ao carregar detalhes',
+                    style: Theme.of(context).textTheme.headlineSmall,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    provider.error!,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: Colors.red),
+                  ),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: () {
+                      context.go('/home/usuarios');
+                    },
+                    child: const Text('Voltar para lista'),
+                  ),
+                ],
+              ),
+            );
+          }
 
-            // Permissões (apenas para admin)
-            if (podeGerenciar) _buildPermissoesCard(provider),
-          ],
-        ),
+          final usuario = provider.usuarioSelecionado;
+          if (usuario == null) {
+            return const Center(
+              child: Text('Usuário não encontrado'),
+            );
+          }
+
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildInfoCard(context, usuario, provider),
+                const SizedBox(height: 16),
+                _buildPermissionsCard(context, provider),
+                const SizedBox(height: 16),
+                _buildModulesCard(context, provider),
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      context.go('/home/usuarios');
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.grey.shade200,
+                      foregroundColor: Colors.black,
+                    ),
+                    child: const Text('Voltar para lista'),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
       ),
     );
   }
 
-  Widget _buildPerfilCard(ProfileModel usuario) {
+  // ============================================
+  // WIDGET: Card de informações
+  // ============================================
+  Widget _buildInfoCard(BuildContext context, ProfileModel usuario, UsuariosProvider provider) {
     return Card(
       elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            // Avatar
-            CircleAvatar(
-              radius: 50,
-              backgroundColor: _getNivelCor(usuario.nivelAcesso).withAlpha(26),
-              child: Text(
-                usuario.initials,
-                style: TextStyle(
-                  fontSize: 32,
-                  fontWeight: FontWeight.bold,
-                  color: _getNivelCor(usuario.nivelAcesso),
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              usuario.nome,
-              style: const TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-                color: AppTheme.textPrimary,
-              ),
-            ),
-            if (usuario.cargo != null) ...[
-              const SizedBox(height: 4),
-              Text(
-                usuario.cargo!,
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Colors.grey.shade600,
-                ),
-              ),
-            ],
-            const SizedBox(height: 8),
-            _buildNivelBadge(usuario.nivelAcesso),
-            const SizedBox(height: 8),
-            _buildStatusBadge(usuario.isActive),
-            const Divider(height: 24),
-            // Informações
-            _buildInfoRow(Icons.email, 'Email', usuario.email ?? 'Não informado'),
-            if (usuario.departamento != null)
-              _buildInfoRow(Icons.business, 'Departamento', usuario.departamento!),
-            if (usuario.telefone != null)
-              _buildInfoRow(Icons.phone, 'Telefone', usuario.telefone!),
-            if (usuario.isContato)
-              _buildInfoRow(Icons.link, 'Contato', 'Vinculado a um contato'),
-            _buildInfoRow(
-              Icons.calendar_today,
-              'Criado em',
-              usuario.createdAt != null
-                  ? _formatDate(usuario.createdAt!)
-                  : 'Não informado',
-            ),
-            if (usuario.lastLogin != null)
-              _buildInfoRow(
-                Icons.login,
-                'Último acesso',
-                _formatDate(usuario.lastLogin!),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStatsCard(ProfileModel usuario) {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            _buildStatItem(
-              'Acessos',
-              '12',
-              Icons.history,
-              AppTheme.primaryColor,
-            ),
-            const VerticalDivider(),
-            _buildStatItem(
-              'Módulos',
-              '${context.watch<UsuariosProvider>().permissoes.where((p) => p.canRead).length}',
-              Icons.grid_view,
-              AppTheme.successColor,
-            ),
-            const VerticalDivider(),
-            _buildStatItem(
-              'Criado há',
-              _getTimeAgo(usuario.createdAt!),
-              Icons.calendar_today,
-              AppTheme.warningColor,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPermissoesCard(UsuariosProvider provider) {
-    if (provider.permissoes.isEmpty) {
-      return Card(
-        elevation: 2,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Permissões',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.textPrimary,
-                ),
-              ),
-              const SizedBox(height: 12),
-              const Center(
-                child: Padding(
-                  padding: EdgeInsets.all(16),
-                  child: Text('Nenhuma permissão configurada'),
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    // Agrupar permissões
-    final modules = provider.modulos;
-    final permissoes = provider.permissoes;
-
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
-                  'Permissões por Módulo',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: AppTheme.textPrimary,
+                CircleAvatar(
+                  radius: 30,
+                  backgroundColor: usuario.isActive ? Colors.green : Colors.grey,
+                  child: Text(
+                    usuario.nome.isNotEmpty ? usuario.nome[0].toUpperCase() : '?',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
-                if (_isSaving)
-                  const SizedBox(
-                    height: 20,
-                    width: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        usuario.nome,
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: usuario.isActive ? Colors.green : Colors.red,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          usuario.isActive ? 'Ativo' : 'Inativo',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
+                ),
+                IconButton(
+                  icon: Icon(
+                    usuario.isActive ? Icons.block : Icons.check_circle,
+                    color: usuario.isActive ? Colors.red : Colors.green,
+                  ),
+                  onPressed: () {
+                    _toggleStatus(context, usuario);
+                  },
+                  tooltip: usuario.isActive ? 'Desativar' : 'Ativar',
+                ),
               ],
             ),
-            const SizedBox(height: 12),
-            ...modules.map((module) {
+            const Divider(),
+            _buildInfoRow('ID', usuario.userId),
+            _buildInfoRow('Email', usuario.userId),
+            if (usuario.cargo != null) _buildInfoRow('Cargo', usuario.cargo!),
+            if (usuario.departamento != null) _buildInfoRow('Departamento', usuario.departamento!),
+            if (usuario.telefone != null) _buildInfoRow('Telefone', usuario.telefone!),
+            _buildInfoRow('Nível de Acesso', usuario.nivelAcesso.name),
+            _buildInfoRow('Data de Criação', _formatDate(usuario.createdAt)),
+            if (usuario.lastLogin != null)
+              _buildInfoRow('Último Login', _formatDate(usuario.lastLogin!)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ============================================
+  // WIDGET: Linha de informação
+  // ============================================
+  Widget _buildInfoRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 120,
+            child: Text(
+              label,
+              style: const TextStyle(
+                fontWeight: FontWeight.w600,
+                color: Colors.grey,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(value),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ============================================
+  // WIDGET: Card de permissões
+  // ============================================
+  Widget _buildPermissionsCard(BuildContext context, UsuariosProvider provider) {
+    final permissoes = provider.permissoes;
+    final modulos = provider.modulos;
+
+    if (permissoes.isEmpty || modulos.isEmpty) {
+      return Card(
+        elevation: 2,
+        child: const Padding(
+          padding: EdgeInsets.all(16),
+          child: Center(
+            child: Text('Nenhuma permissão configurada'),
+          ),
+        ),
+      );
+    }
+
+    return Card(
+      elevation: 2,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Permissões',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Gerencie as permissões de acesso do usuário',
+              style: TextStyle(
+                color: Colors.grey,
+                fontSize: 14,
+              ),
+            ),
+            const SizedBox(height: 16),
+            ...modulos.map((modulo) {
               final permissao = permissoes.firstWhere(
-                (p) => p.moduleId == module.id,
+                (p) => p.moduleId == modulo.id,
                 orElse: () => PermissionModel(
-                  id: '',
                   profileId: provider.usuarioSelecionado!.id,
-                  moduleId: module.id,
+                  moduleId: modulo.id,
+                  canRead: false,
+                  canWrite: false,
+                  canDelete: false,
+                  isCustom: false,
                 ),
               );
               return PermissionToggle(
-                module: module,
+                module: modulo,  // ✅ CORRETO: 'module' em vez de 'modulo'
                 permissao: permissao,
-                onChanged: (updatedPermissao) {
-                  _atualizarPermissao(updatedPermissao, provider);
+                onChanged: (updated) {
+                  provider.atualizarPermissao(updated);
                 },
               );
             }).toList(),
@@ -311,150 +307,145 @@ class _UsuariosDetailScreenState extends State<UsuariosDetailScreen> {
     );
   }
 
-  Future<void> _atualizarPermissao(PermissionModel permissao, UsuariosProvider provider) async {
-    setState(() => _isSaving = true);
-    await provider.atualizarPermissao(permissao);
-    setState(() => _isSaving = false);
-  }
+  // ============================================
+  // WIDGET: Card de módulos
+  // ============================================
+  Widget _buildModulesCard(BuildContext context, UsuariosProvider provider) {
+    final modulos = provider.modulos;
 
-  Widget _buildInfoRow(IconData icon, String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        children: [
-          Icon(icon, size: 18, color: Colors.grey.shade600),
-          const SizedBox(width: 12),
-          SizedBox(
-            width: 100,
-            child: Text(
-              label,
+    if (modulos.isEmpty) {
+      return Card(
+        elevation: 2,
+        child: const Padding(
+          padding: EdgeInsets.all(16),
+          child: Center(
+            child: Text('Nenhum módulo disponível'),
+          ),
+        ),
+      );
+    }
+
+    return Card(
+      elevation: 2,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Módulos Disponíveis',
               style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey.shade600,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
               ),
             ),
-          ),
-          Expanded(
-            child: Text(
-              value,
-              style: const TextStyle(
+            const SizedBox(height: 8),
+            const Text(
+              'Lista de módulos que o usuário pode acessar',
+              style: TextStyle(
+                color: Colors.grey,
                 fontSize: 14,
-                color: AppTheme.textPrimary,
               ),
-              overflow: TextOverflow.ellipsis,
             ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStatItem(String label, String value, IconData icon, Color color) {
-    return Expanded(
-      child: Column(
-        children: [
-          Icon(icon, color: color, size: 24),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: AppTheme.textPrimary,
-            ),
-          ),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey.shade600,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStatusBadge(bool isActive) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      decoration: BoxDecoration(
-        color: isActive ? AppTheme.successColor.withAlpha(26) : AppTheme.dangerColor.withAlpha(26),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Text(
-        isActive ? 'Ativo' : 'Inativo',
-        style: TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w500,
-          color: isActive ? AppTheme.successColor : AppTheme.dangerColor,
+            const SizedBox(height: 16),
+            ...modulos.map((modulo) {
+              return ListTile(
+                leading: Icon(
+                  _getIconForModule(modulo.nome),
+                  color: modulo.isActive ? Colors.blue : Colors.grey,
+                ),
+                title: Text(modulo.nome),
+                subtitle: Text(modulo.descricao ?? ''),
+                trailing: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: modulo.isActive ? Colors.green : Colors.red,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    modulo.isActive ? 'Ativo' : 'Inativo',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                    ),
+                  ),
+                ),
+              );
+            }).toList(),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildNivelBadge(NivelAcesso nivel) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      decoration: BoxDecoration(
-        color: _getNivelCor(nivel).withAlpha(26),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Text(
-        nivel.label,
-        style: TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w500,
-          color: _getNivelCor(nivel),
+  // ============================================
+  // MÉTODO: Formatar data
+  // ============================================
+  String _formatDate(DateTime? date) {
+    if (date == null) return 'N/A';
+    return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year} ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
+  }
+
+  // ============================================
+  // MÉTODO: Alternar status
+  // ============================================
+  Future<void> _toggleStatus(BuildContext context, ProfileModel usuario) async {
+    final provider = context.read<UsuariosProvider>();
+    try {
+      if (usuario.isActive) {
+        await provider.desativarUsuario(usuario.id);
+      } else {
+        await provider.ativarUsuario(usuario.id);
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            usuario.isActive
+                ? 'Usuário desativado com sucesso!'
+                : 'Usuário ativado com sucesso!',
+          ),
+          backgroundColor: Colors.green,
         ),
-      ),
-    );
-  }
-
-  Color _getNivelCor(NivelAcesso nivel) {
-    switch (nivel) {
-      case NivelAcesso.hyper:
-        return Colors.red.shade700;
-      case NivelAcesso.admin:
-        return AppTheme.primaryColor;
-      case NivelAcesso.manager:
-        return AppTheme.successColor;
-      case NivelAcesso.supervisor:
-        return AppTheme.warningColor;
-      case NivelAcesso.user:
-        return Colors.grey.shade700;
-      case NivelAcesso.guest:
-        return Colors.grey.shade500;
+      );
+      _carregarDetalhes();
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Erro ao alterar status: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
-  String _formatDate(DateTime date) {
-    final now = DateTime.now();
-    final diff = now.difference(date);
-
-    if (diff.inDays > 0) {
-      return '${diff.inDays} dia${diff.inDays > 1 ? 's' : ''} atrás';
-    } else if (diff.inHours > 0) {
-      return '${diff.inHours} hora${diff.inHours > 1 ? 's' : ''} atrás';
-    } else if (diff.inMinutes > 0) {
-      return '${diff.inMinutes} minuto${diff.inMinutes > 1 ? 's' : ''} atrás';
-    } else {
-      return 'Agora mesmo';
-    }
-  }
-
-  String _getTimeAgo(DateTime date) {
-    final now = DateTime.now();
-    final diff = now.difference(date);
-
-    if (diff.inDays > 30) {
-      return '${(diff.inDays / 30).floor()} mês${(diff.inDays / 30).floor() > 1 ? 'es' : ''}';
-    } else if (diff.inDays > 0) {
-      return '${diff.inDays} dia${diff.inDays > 1 ? 's' : ''}';
-    } else if (diff.inHours > 0) {
-      return '${diff.inHours} hora${diff.inHours > 1 ? 's' : ''}';
-    } else {
-      return 'Hoje';
+  // ============================================
+  // MÉTODO: Buscar ícone para módulo
+  // ============================================
+  IconData _getIconForModule(String nome) {
+    switch (nome.toLowerCase()) {
+      case 'dashboard':
+        return Icons.dashboard;
+      case 'usuários':
+        return Icons.people;
+      case 'projetos':
+        return Icons.folder;
+      case 'tarefas':
+        return Icons.task;
+      case 'operacional':
+        return Icons.build;
+      case 'contabilidade':
+        return Icons.account_balance;
+      case 'financeiro':
+        return Icons.attach_money;
+      case 'documentos':
+        return Icons.description;
+      case 'ia':
+        return Icons.psychology;
+      default:
+        return Icons.circle;
     }
   }
 }
