@@ -20,33 +20,43 @@ echo "🚀 Iniciando limpeza e build do Flutter..."
 echo "📁 Log será salvo em: $LOG_FILE"
 echo ""
 
-# 1. Limpa o cache do Flutter
+# 1. Matar processos do Flutter
+echo "🛑 0. Matando processos do Flutter..."
+killall flutter 2>/dev/null || true
+killall dart 2>/dev/null || true
+
+# 2. Limpa o cache do Flutter
 echo "🧹 1. Executando flutter clean..."
 flutter clean
 
-# 2. Remove o .dart_tool manualmente
+# 3. Remove o .dart_tool manualmente
 echo "🗑️  2. Removendo .dart_tool..."
 rm -rf .dart_tool
 
-# 3. Remove a pasta build
+# 4. Remove a pasta build
 echo "🗑️  3. Removendo build..."
 rm -rf build
 
-# 4. Recupera as dependências
-echo "📦 4. Executando flutter pub get..."
+# 5. Remove pubspec.lock
+echo "🗑️  4. Removendo pubspec.lock..."
+rm -rf pubspec.lock
+
+# 6. Recupera as dependências
+echo "📦 5. Executando flutter pub get..."
 flutter pub get
 
-# 5. Executa o app com verbose e salva o log
-echo "🚀 5. Executando flutter run -d chrome --verbose..."
+# 7. Executa o app com porta fixa
+echo "🚀 6. Executando flutter run -d chrome --web-port 8081..."
 echo "📝 Salvando log em: $LOG_FILE"
 echo ""
 echo "--------------------------------------------------"
-echo "🔴 O aplicativo está rodando. Pressione Ctrl+C para parar."
+echo "🔴 O aplicativo está rodando em: http://localhost:8081"
+echo "🔴 Pressione Ctrl+C para parar."
 echo "--------------------------------------------------"
 echo ""
 
-# ✅ Adicionado --enable-experiment=dot-shorthands (se precisar)
-flutter run -d chrome --verbose --enable-experiment=dot-shorthands 2>&1 | tee "$LOG_FILE"
+# Rodar com porta fixa e sem verbose (mais limpo)
+flutter run -d chrome --web-port 8081 2>&1 | tee "$LOG_FILE"
 
 # Mensagem final (quando o usuário pressionar Ctrl+C)
 echo ""

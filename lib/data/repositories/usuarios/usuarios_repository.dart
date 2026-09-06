@@ -17,7 +17,7 @@ class UsuariosRepository {
   final SecurityMiddleware _security = SecurityMiddleware();
 
   // ============================================
-  // 1. LISTAR USUÁRIOS
+  // 1. LISTAR USUÁRIOS (COM PARÂMETRO SEARCH)
   // ============================================
   Future<List<ProfileModel>> listarUsuarios({
     String? search,
@@ -43,7 +43,6 @@ class UsuariosRepository {
 
       final response = await query.order('nome', ascending: true);
 
-      // Converter para ProfileModel
       return (response as List)
           .map((item) => ProfileModel.fromJson(item))
           .toList();
@@ -100,14 +99,12 @@ class UsuariosRepository {
     String? departamento,
     String? telefone,
     String? avatarUrl,
-    String? contatoId, // Opcional: vincular a contato existente
+    String? contatoId,
   }) async {
     try {
-      // 1. Sanitizar entradas
       final safeEmail = _security.validateAndSanitizeEmail(email);
       final safeNome = _security.sanitizeInput(nome);
 
-      // 2. Criar usuário no auth.users
       final authResponse = await _supabase.auth.admin.createUser(
         AdminUserAttributes(
           email: safeEmail,
@@ -123,7 +120,6 @@ class UsuariosRepository {
 
       final userId = authResponse.user!.id;
 
-      // 3. Criar perfil
       final profileData = {
         'user_id': userId,
         'nome': safeNome,
@@ -145,7 +141,6 @@ class UsuariosRepository {
 
       final profile = ProfileModel.fromJson(profileResponse);
 
-      // 4. Se vinculou a um contato, atualizar o contato
       if (contatoId != null) {
         await _supabase
             .from('tb_ocont')
@@ -156,7 +151,6 @@ class UsuariosRepository {
             .eq('id', contatoId);
       }
 
-      // 5. Criar permissões padrão
       await _criarPermissoesPadrao(profile.id, nivelAcesso);
 
       return profile;
@@ -202,7 +196,6 @@ class UsuariosRepository {
           .select()
           .single();
 
-      // Se o nível de acesso mudou, atualizar permissões
       if (nivelAcesso != null) {
         await _atualizarPermissoesPorNivel(id, nivelAcesso);
       }
@@ -252,7 +245,6 @@ class UsuariosRepository {
   // ============================================
   Future<void> vincularContato(String profileId, String contatoId) async {
     try {
-      // Atualizar perfil
       await _supabase
           .from('profiles')
           .update({
@@ -262,7 +254,6 @@ class UsuariosRepository {
           })
           .eq('id', profileId);
 
-      // Atualizar contato
       await _supabase
           .from('tb_ocont')
           .update({
@@ -281,7 +272,7 @@ class UsuariosRepository {
   // ============================================
   Future<void> _criarPermissoesPadrao(String profileId, NivelAcesso nivel) async {
     try {
-      final modules = await _buscarModules();
+      final modules = await buscarModules();
 
       for (var module in modules) {
         final permissao = PermissionModel.fromNivel(
@@ -302,7 +293,7 @@ class UsuariosRepository {
   // ============================================
   Future<void> _atualizarPermissoesPorNivel(String profileId, NivelAcesso nivel) async {
     try {
-      final modules = await _buscarModules();
+      final modules = await buscarModules();
 
       for (var module in modules) {
         final permissao = PermissionModel.fromNivel(
@@ -324,9 +315,9 @@ class UsuariosRepository {
   }
 
   // ============================================
-  // 11. BUSCAR MÓDULOS
+  // 11. BUSCAR MÓDULOS (PÚBLICO)
   // ============================================
-  Future<List<ModuleModel>> _buscarModules() async {
+  Future<List<ModuleModel>> buscarModules() async {
     try {
       final response = await _supabase
           .from('modules')
@@ -338,7 +329,6 @@ class UsuariosRepository {
           .map((item) => ModuleModel.fromJson(item))
           .toList();
     } catch (e) {
-      // Se não existir tabela, usar módulos padrão
       return ModuleConstants.defaultModules;
     }
   }

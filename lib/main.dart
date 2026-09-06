@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flowproj/routes/app_router.dart';
 import 'package:provider/provider.dart';
 import 'presentation/providers/auth/auth_provider.dart';
+import 'presentation/providers/usuarios/usuarios_provider.dart';
 import 'core/config/supabase_config.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
@@ -20,6 +21,7 @@ class MyApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ChangeNotifierProvider(create: (_) => UsuariosProvider()),
       ],
       child: MaterialApp.router(
         title: 'SocialFlow',

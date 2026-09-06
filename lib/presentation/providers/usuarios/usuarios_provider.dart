@@ -17,6 +17,7 @@ class UsuariosProvider extends ChangeNotifier {
   String? _error;
   String? _searchQuery;
   bool _mostrarInativos = false;
+  NivelAcesso? _nivelFiltro;  // ✅ ADICIONADO
 
   // Getters
   List<ProfileModel> get usuarios => _usuarios;
@@ -42,20 +43,31 @@ class UsuariosProvider extends ChangeNotifier {
   String? get error => _error;
   bool get mostrarInativos => _mostrarInativos;
   String? get searchQuery => _searchQuery;
+  NivelAcesso? get nivelFiltro => _nivelFiltro;
 
   // ============================================
   // MÉTODOS DE CARREGAMENTO
   // ============================================
 
-  Future<void> carregarUsuarios() async {
+  Future<void> carregarUsuarios({
+    String? search,
+    bool? ativo,
+    NivelAcesso? nivel,
+  }) async {
     _isLoading = true;
     _error = null;
     notifyListeners();
 
     try {
+      // Atualizar filtros se fornecidos
+      if (search != null) _searchQuery = search;
+      if (ativo != null) _mostrarInativos = !ativo;
+      if (nivel != null) _nivelFiltro = nivel;
+
       _usuarios = await _repository.listarUsuarios(
         search: _searchQuery,
         ativo: _mostrarInativos ? null : true,
+        nivel: _nivelFiltro,
       );
       _error = null;
     } catch (e) {
@@ -82,7 +94,7 @@ class UsuariosProvider extends ChangeNotifier {
         // Buscar permissões
         _permissoes = await _repository.listarPermissoes(_usuarioSelecionado!.id);
         // Buscar módulos
-        _modulos = await _repository._buscarModules();
+        _modulos = await _repository.buscarModules();
       }
       
       _error = null;
@@ -249,6 +261,12 @@ class UsuariosProvider extends ChangeNotifier {
     carregarUsuarios();
   }
 
+  void setNivelFiltro(NivelAcesso? nivel) {
+    _nivelFiltro = nivel;
+    notifyListeners();
+    carregarUsuarios();
+  }
+
   void toggleMostrarInativos() {
     _mostrarInativos = !_mostrarInativos;
     notifyListeners();
@@ -258,6 +276,7 @@ class UsuariosProvider extends ChangeNotifier {
   void limparFiltros() {
     _searchQuery = null;
     _mostrarInativos = false;
+    _nivelFiltro = null;
     notifyListeners();
     carregarUsuarios();
   }
