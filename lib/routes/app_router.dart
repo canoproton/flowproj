@@ -29,7 +29,7 @@ class AppRouter {
         return '/login';
       }
       if (isLoggedIn && isLoginRoute) {
-        return '/home/dashboard';  // ✅ CORRETO
+        return '/home/dashboard';  // ✅ CORRETO - NÃO use '/home'
       }
       return null;
     },
